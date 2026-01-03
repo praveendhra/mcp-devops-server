@@ -1,0 +1,14 @@
+{
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests/", "-v"],
+  "github.copilot.chat.mcpServers": {
+    "devops": {
+      "command": "python",
+      "args": ["-m", "mcp_devops_server"],
+      "env": {
+        "KUBECONFIG": "~/.kube/config"
+      }
+    }
+  }
+}

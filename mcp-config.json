@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "devops": {
+      "command": "python",
+      "args": ["-m", "mcp_devops_server"],
+      "env": {
+        "KUBECONFIG": "~/.kube/config",
+        "AWS_PROFILE": "default"
+      }
+    }
+  }
+}
