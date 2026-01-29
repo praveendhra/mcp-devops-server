@@ -16,24 +16,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Lint
-        run: ruff check .
+      - name: Lint with ruff
+        run: ruff check src/ tests/
 
-      - name: Type check
-        run: mypy mcp_devops_server/
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports
 
-      - name: Test
-        run: pytest tests/ -v --cov=mcp_devops_server --cov-report=xml
+      - name: Run tests
+        run: pytest tests/ -v --cov=src --cov-report=xml
 
       - name: Upload coverage
-        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
-          file: coverage.xml
+          file: ./coverage.xml
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t mcp-devops-server:test .
+
+      - name: Run container smoke test
+        run: |
+          docker run --rm mcp-devops-server:test python -c "from src.config import ServerConfig; print('OK')"
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mcp-devops-server:test
+          format: table
+          severity: CRITICAL,HIGH
