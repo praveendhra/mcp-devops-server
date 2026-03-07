@@ -1,21 +1,37 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies (kubectl, awscli, gh)
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+FROM python:3.12-slim
+
+RUN groupadd -r mcp && useradd -r -g mcp mcp
+
+# Install runtime dependencies (kubectl, helm, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    && curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
-    && rm kubectl \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    dnsutils \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && install kubectl /usr/local/bin/ && rm kubectl
+
+# Install helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+WORKDIR /app
+
+COPY --from=builder /install /usr/local
+COPY src/ ./src/
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
 
-COPY . .
+USER mcp
 
-RUN useradd -r -s /bin/false mcpuser
-USER mcpuser
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD python -c "import src.config; print('ok')" || exit 1
 
-ENTRYPOINT ["python", "-m", "mcp_devops_server"]
+ENTRYPOINT ["python", "-m", "src.server"]
