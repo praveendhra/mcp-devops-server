@@ -1,73 +1,76 @@
 # MCP DevOps Server
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes DevOps tools and workflows to AI assistants like GitHub Copilot and Claude.
+A Model Context Protocol (MCP) server that provides AI assistants with DevOps tools for Kubernetes, cloud providers, CI/CD, security scanning, and infrastructure management.
 
 ## Features
 
-- **Kubernetes**: Get pod status, logs, describe resources, scale deployments
-- **Docker**: List containers, images, inspect, build, and manage containers
-- **AWS**: Describe EC2 instances, S3 operations, CloudWatch logs, ECS status
-- **Terraform**: Plan, validate, show state, list workspaces
-- **CI/CD**: Trigger GitHub Actions workflows, get run status, view logs
-- **Monitoring**: Query Prometheus metrics, check alerting rules
+- **Kubernetes**: Pod management, deployments, logs, troubleshooting
+- **Helm**: Chart management, release history, template rendering
+- **ArgoCD**: Application sync, diff, and status monitoring
+- **AWS**: EC2, ECS, S3, Cost Explorer, Secrets Manager
+- **Azure**: AKS, WebApps, ACR, Key Vault
+- **GCP**: GKE, Cloud Run, Cloud Logging
+- **Security**: Trivy scanning, K8s security audit
+- **Observability**: Log analysis, DNS lookup, SSL checks, endpoint monitoring
+- **Git**: Repository stats, change tracking, commit search
+- **Cost**: Cloud spend analysis and forecasting
 
-## Installation
-
-```bash
-pip install -e .
-```
-
-## Usage
-
-### As an MCP Server (stdio)
+## Quick Start
 
 ```bash
-python -m mcp_devops_server
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+python -m src.server
+
+# Or with Docker
+docker build -t mcp-devops-server .
+docker run -v ~/.kube:/home/mcp/.kube:ro mcp-devops-server
 ```
 
-### VS Code Integration
+## VS Code Integration
 
-Add to your `.vscode/settings.json`:
-
+Add to `.vscode/settings.json`:
 ```json
 {
-  "github.copilot.chat.mcpServers": {
-    "devops": {
-      "command": "python",
-      "args": ["-m", "mcp_devops_server"],
-      "env": {
-        "KUBECONFIG": "~/.kube/config"
+  "mcp": {
+    "servers": {
+      "devops": {
+        "command": "python",
+        "args": ["-m", "src.server"],
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "KUBECONFIG": "${env:HOME}/.kube/config",
+          "AWS_PROFILE": "default"
+        }
       }
     }
   }
 }
 ```
 
-## Architecture
+## Configuration
 
-```
-mcp_devops_server/
-├── __main__.py       # Entry point
-├── server.py         # MCP server setup and tool registration
-├── tools/
-│   ├── kubernetes.py # K8s operations via kubectl
-│   ├── docker.py     # Docker operations
-│   ├── aws.py        # AWS CLI wrapper
-│   ├── terraform.py  # Terraform operations
-│   ├── github.py     # GitHub Actions API
-│   └── monitoring.py # Prometheus queries
-└── utils/
-    ├── runner.py      # Subprocess runner with timeout
-    └── formatter.py   # Output formatting helpers
-```
+| Variable | Default | Description |
+|----------|---------|------------|
+| `MCP_HOST` | localhost | Server host |
+| `MCP_PORT` | 8080 | Server port |
+| `MCP_DEBUG` | false | Enable debug mode |
+| `MCP_LOG_LEVEL` | INFO | Logging level |
+| `MCP_DEFAULT_NAMESPACE` | default | K8s namespace |
+| `AWS_PROFILE` | default | AWS profile |
+| `GCP_PROJECT` | - | GCP project ID |
 
-## Development
+## Documentation
+
+- [Tool Reference](docs/TOOLS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](docs/CONTRIBUTING.md)
+
+## Testing
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/ -v
+pip install -r requirements-dev.txt
+pytest tests/ -v --cov=src
 ```
-
-## License
-
-MIT
